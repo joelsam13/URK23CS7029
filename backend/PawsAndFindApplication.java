@@ -6,11 +6,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.DriverManager;
+import java.sql.Statement;
 
 @SpringBootApplication
 @RestController
@@ -18,15 +21,48 @@ import java.sql.SQLException;
 public class PawsAndFindApplication {
 
     @Autowired
-    private DataSource dataSource;
+    private DataSource dataSource; // Spring-managed connection pool
+
+    // Optional: If you want to have manual connection parameters as well
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/pawsandfind";
+    private static final String DB_USERNAME = "root";
+    private static final String DB_PASSWORD = "connect";
 
     public static void main(String[] args) {
         SpringApplication.run(PawsAndFindApplication.class, args);
     }
 
-    // Create tables during application startup
+    // Method to demonstrate manual connection (similar to dbdb3)
+    private void manualConnectionExample() {
+        try {
+            // Load the JDBC driver
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            
+            // Create a manual connection
+            try (Connection manualConn = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD);
+                 Statement st = manualConn.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT * FROM users")) {
+                
+                System.out.println("Manual Connection Established successfully");
+                
+                while (rs.next()) {
+                    int id = rs.getInt("id");
+                    String name = rs.getString("name");
+                    String email = rs.getString("email");
+                    System.out.println("ID: " + id + ", Name: " + name + ", Email: " + email);
+                }
+                
+                System.out.println("Manual Connection Closed...");
+            }
+        } catch (ClassNotFoundException | SQLException e) {
+            System.err.println("Error in manual connection: " + e.getMessage());
+        }
+    }
+
+    // Create tables during application startup (using Spring's DataSource)
     @PostConstruct
     public void createTables() {
+        // Using Spring's DataSource (recommended)
         try (Connection conn = dataSource.getConnection()) {
             // Create pets table
             conn.createStatement().execute("""
@@ -44,14 +80,28 @@ public class PawsAndFindApplication {
                 )
             """);
 
-            // Create other tables similarly...
+            // Create users table if not exists
+            conn.createStatement().execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    email VARCHAR(100) NOT NULL UNIQUE,
+                    password VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """);
 
+            System.out.println("Tables created successfully using DataSource");
+            
+            // Optionally demonstrate the manual connection
+            manualConnectionExample();
+            
         } catch (SQLException e) {
             System.err.println("Error creating tables: " + e.getMessage());
         }
     }
 
-    // User signup endpoint
+    // Rest of your endpoints remain the same...
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody User user) {
         try (Connection conn = dataSource.getConnection()) {
@@ -75,7 +125,6 @@ public class PawsAndFindApplication {
         }
     }
 
-    // User login endpoint
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
         try (Connection conn = dataSource.getConnection()) {
@@ -92,6 +141,4 @@ public class PawsAndFindApplication {
             return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
         }
     }
-
-    // Add other endpoints (e.g., add_pet, get_pets, etc.) with similar structure
 }
