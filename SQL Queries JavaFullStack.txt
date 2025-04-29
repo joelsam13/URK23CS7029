@@ -1,0 +1,67 @@
+CREATE DATABASE IF NOT EXISTS pawsandfind;
+
+USE pawsandfind;
+
+-- Users table
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Pets table
+CREATE TABLE pets (
+    pet_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    name VARCHAR(100) NOT NULL,
+    type ENUM('dog', 'cat', 'bird', 'rabbit', 'other') NOT NULL,
+    breed VARCHAR(100),
+    age INT,
+    description TEXT,
+    image_url VARCHAR(255),
+    status ENUM('available', 'adopted', 'pending') DEFAULT 'available',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- Adoptions table
+CREATE TABLE adoptions (
+    adoption_id INT AUTO_INCREMENT PRIMARY KEY,
+    pet_id INT,
+    user_id INT,
+    adopter_name VARCHAR(100) NOT NULL,
+    adopter_email VARCHAR(100) NOT NULL,
+    adopter_phone VARCHAR(20) NOT NULL,
+    adoption_date DATE NOT NULL,
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (pet_id) REFERENCES pets(pet_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- Supplies table
+CREATE TABLE supplies (
+    supply_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    pet_type ENUM('dog', 'cat', 'bird', 'rabbit', 'other') NOT NULL,
+    items JSON NOT NULL,
+    delivery_date DATE NOT NULL,
+    status ENUM('pending', 'shipped', 'delivered') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- Vet visits table
+CREATE TABLE vet_visits (
+    visit_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    pet_id INT,
+    visit_date DATE NOT NULL,
+    reason VARCHAR(255) NOT NULL,
+    status ENUM('scheduled', 'completed', 'cancelled') DEFAULT 'scheduled',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (pet_id) REFERENCES pets(pet_id)
+);
